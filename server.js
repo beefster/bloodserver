@@ -18,4 +18,4 @@ var router = express.Router();
 router.post('/register',login.register);
 router.post('/login',login.login)
 app.use('/api', router);
-app.listen(1337, () => console.log('Server running.'));
+app.listen(907, () => console.log('Server running.'));

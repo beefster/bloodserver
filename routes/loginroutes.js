@@ -40,13 +40,14 @@ exports.register = async function(req, res){
 }
 
 exports.login = async function(req, res){
+    console.log(req.body);
     var email = req.body.email;
     var password = req.body.password;
-    connection.query('SELECT * FROM users WHERE email = ?', [email], async function (error, results, fields){
+    connection.query('SELECT * FROM Users WHERE email = ?', [email], async function (error, results, fields){
         if (error) {
             res.send({
                 "code":400,
-                "failed":"login query error"
+                "queryerror":error
               });
         } else if(results.length > 0){
             const passwordMatch = await bcrypt.compare(password, results[0].password);
