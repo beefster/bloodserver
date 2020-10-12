@@ -20,7 +20,6 @@ connection.connect(function(err){
 });
 
 exports.register = async function(req, res){
-    console.log('request received', req);
     try{
         const passwordHash = await argon2.hash(req.body.Password);
         var user={
@@ -35,6 +34,7 @@ exports.register = async function(req, res){
                     'code':400,
                     'queryerror':error
                 })
+                return
             } else {
                 connection.query(`SELECT UserID FROM Users WHERE email = '${req.body.Email}'`,
                 (error, results, fields) => {
@@ -44,33 +44,39 @@ exports.register = async function(req, res){
                                 'code': 400,
                                 'queryerror': error
                             });
+                            return
                         } else {
-                            userId = results[0]['UserID'];
+                            var userId = results[0]['UserID'];
 
-                                var record ={
-                                    firstName:  req.body.First_name,
-                                    lastName:   req.body.Last_name,
-                                    address:    req.body.Address,
-                                    city:       req.body.City,
-                                    state:      req.body.State,
-                                    zipCode:    req.body.Zip_code,
-                                    country:    req.body.Country,
-                                    bloodType:  req.body.Blood_type,
-                                    userName:   req.body.User_name,
+                            var record ={
+                                UserID:     userId,
+                                firstName:  req.body.First_name,
+                                lastName:   req.body.Last_name,
+                                address:    req.body.Address,
+                                city:       req.body.City,
+                                state:      req.body.State,
+                                zip:    req.body.Zip_code,
+                                country:    req.body.Country,
+                                userType:   req.body.User_type,
+                                bloodType:  req.body.Blood_type,
+                                userName:   req.body.User_name,
+                            }
+                            connection.query('INSERT INTO UserRecords SET ?', record,
+                            function(error, results, fields){
+                                if(error){
+                                    console.log(error)
+                                    res.send({
+                                        'code':400,
+                                        'failed':error,
+                                    })
+                                    return
                                 }
-                                connection.query('INSERT INTO userRecords SET ?', record,
-                                function(error, results, fields){
-                                    if(error){
-                                        res.send({
-                                            'code':400,
-                                            'failed':error,
-                                        })
-                                    }
-                                })
+
                                 res.send({
                                     'code':200,
                                     'success':'registration success'
                                 });
+                            })
                             
                         }
                     })
