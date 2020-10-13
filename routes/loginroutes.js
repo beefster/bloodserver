@@ -98,7 +98,7 @@ exports.login = async function(req, res){
                 "code":400,
                 "queryerror":error
               });
-        } else if(results.length > 0){
+        } else if(results.length == 1){
             if(await argon2.verify(results[0].passwordHash, req.body.password)){
                 console.log('login success\n================');
                 res.send({
