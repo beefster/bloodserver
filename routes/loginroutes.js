@@ -21,6 +21,7 @@ connection.connect(function(err){
 
 exports.register = async function(req, res){
     try{
+        console.log(`registration attempt\nemail:${req.body.email}\npass:${req.body.password}`)
         const passwordHash = await argon2.hash(req.body.Password);
         var user={
             'email':req.body.Email,
@@ -90,8 +91,7 @@ exports.register = async function(req, res){
 
 exports.login = async function(req, res){
     const email = req.body.email;
-    const password = await argon.hash(req.body.password);
-    console.log(`login attempt\nuser:${email}\npassword:${password}`);
+    console.log(`login attempt\nuser:${email}\ngave password:${req.body.password}`);
     connection.query('SELECT * FROM Users WHERE email = ?', [email], async function (error, results, fields){
         if (error) {
             res.send({
@@ -99,18 +99,24 @@ exports.login = async function(req, res){
                 "queryerror":error
               });
         } else if(results.length > 0){
-            const passwordMatch = await bcrypt.compare(password, results[0].password);
-            if(passwordMatch){
+            if(await argon2.verify(results[0].passwordHash, req.body.password)){
+                console.log('login success\n================');
                 res.send({
                     'code':200,
                     'success':'login success'
                 });
             } else {
+                console.log('login failed\n================');
                 res.send({
                     'code':204,
                     'success':'incorrect password'
                 });
             }
+        } else if(results.length > 1){
+            res.send({
+                'code':204,
+                'success':'duplicate emails'
+            });
         } else {
             res.send({
                 'code':206,
@@ -119,4 +125,10 @@ exports.login = async function(req, res){
         }
         
     })
+}
+exports.search = async function(req, res){
+    connection.query('SELECT * FROM UserRecords', async function(error, results, fields){
+        res.send(results);
+    });
+
 }

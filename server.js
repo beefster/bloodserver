@@ -2,6 +2,7 @@ require('dotenv').config()
 
 const express = require('express');
 var login = require('./routes/loginroutes')
+//var query = require('./routes/queryroutes')
 const bodyParser = require('body-parser');
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(function(req, res, next){
 var router = express.Router();
 
 router.post('/register',login.register);
-router.post('/login',login.login)
+router.post('/login',login.login);
+router.get('/search', login.search);
 app.use('/api', router);
 app.listen(907, () => console.log('Server running.'));
