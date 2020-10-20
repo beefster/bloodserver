@@ -1,98 +1,85 @@
-var mysql = require('mysql');
 const argon2 = require('argon2');
-var secureRandom = require('secure-random');
-
-var connection = mysql.createConnection({
-
-    //set these parameters in a .env file
-
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME
-});
-connection.connect(function(err){
-    if(!err){
-        console.log('Database connected');
-    } else {
-        console.log ('Database connection error');
-    }
-});
+const pool = require('../db').pool;
 
 exports.register = async function(req, res){
     try{
-        console.log(`registration attempt\nemail:${req.body.email}\npass:${req.body.password}`)
-        const passwordHash = await argon2.hash(req.body.Password);
-        var user={
-            'email':req.body.Email,
-            'passwordHash':passwordHash,
-            'salt':''
-        }
-        connection.query('INSERT INTO Users SET ?', user, function (error, results, fields){
-            if (error){
-                console.log('user insert error:\n'+error)
-                res.send({
-                    'code':400,
-                    'queryerror':error
-                })
-                return
-            } else {
-                connection.query(`SELECT UserID FROM Users WHERE email = '${req.body.Email}'`,
-                (error, results, fields) => {
-                        if (error) {
-                            console.log('id select error');
-                            res.send({
-                                'code': 400,
-                                'queryerror': error
-                            });
-                            return
-                        } else {
-                            var userId = results[0]['UserID'];
-
-                            var record ={
-                                UserID:     userId,
-                                firstName:  req.body.First_name,
-                                lastName:   req.body.Last_name,
-                                address:    req.body.Address,
-                                city:       req.body.City,
-                                state:      req.body.State,
-                                zip:    req.body.Zip_code,
-                                country:    req.body.Country,
-                                userType:   req.body.User_type,
-                                bloodType:  req.body.Blood_type,
-                                userName:   req.body.User_name,
-                            }
-                            connection.query('INSERT INTO UserRecords SET ?', record,
-                            function(error, results, fields){
-                                if(error){
-                                    console.log(error)
-                                    res.send({
-                                        'code':400,
-                                        'failed':error,
-                                    })
-                                    return
-                                }
-
-                                res.send({
-                                    'code':200,
-                                    'success':'registration success'
-                                });
-                            })
-                            
-                        }
-                    })
-                
+        pool.getConnection(async function(err, connection){
+            if(err) throw err;
+            console.log(`registration attempt\nemail:${req.body.email}\npass:${req.body.password}`)
+            const passwordHash = await argon2.hash(req.body.Password);
+            var user={
+                'email':req.body.Email,
+                'passwordHash':passwordHash,
+                'salt':''
             }
-        });
+            connection.query('START TRANSACTION');
+            connection.query('INSERT INTO Users SET ?', user, function (error, results, fields){
+                if (error){
+                    console.log('user insert error:\n'+error)
+                    res.send({
+                        'code':400,
+                        'queryerror':error
+                    })
+                    return
+                } else {
+                    connection.query(`SELECT UserID FROM Users WHERE email = '${req.body.Email}'`,
+                    (error, results, fields) => {
+                            if (error) {
+                                console.log('id select error');
+                                res.send({
+                                    'code': 400,
+                                    'queryerror': error
+                                });
+                                connection.query('ROLLBACK');
+                                return
+                            } else {
+                                var userId = results[0]['UserID'];
+                                var record ={
+                                    UserID:     userId,
+                                    firstName:  req.body.First_name,
+                                    lastName:   req.body.Last_name,
+                                    address:    req.body.Address,
+                                    city:       req.body.City,
+                                    state:      req.body.State,
+                                    zip:    req.body.Zip_code,
+                                    country:    req.body.Country,
+                                    userType:   req.body.User_type,
+                                    bloodType:  req.body.Blood_type,
+                                    userName:   req.body.User_name,
+                                }
+                                connection.query('INSERT INTO UserRecords SET ?', record,
+                                function(error, results, fields){
+                                    if(error){
+                                        console.error('record insert error: ',error)
+                                        res.send({
+                                            'code':400,
+                                            'failed':error,
+                                        })
+                                        connection.query('ROLLBACK');
+                                        return
+                                    }
+                                    connection.query('COMMIT');
+                                    res.send({
+                                        'code':200,
+                                        'success':'registration success'
+                                    });
+                                })
+
+                            }
+                        })
+                    
+                }
+            });
+        })
     } catch(err){
-        console.log('hash failure', err);
+        console.error(err);
     }
 }
 
 exports.login = async function(req, res){
     const email = req.body.email;
     console.log(`login attempt\nuser:${email}\ngave password:${req.body.password}`);
-    connection.query('SELECT * FROM Users WHERE email = ?', [email], async function (error, results, fields){
+    pool.query('SELECT * FROM Users WHERE email = ?', [email], async function (error, results, fields){
         if (error) {
             res.send({
                 "code":400,
@@ -125,10 +112,4 @@ exports.login = async function(req, res){
         }
         
     })
-}
-exports.search = async function(req, res){
-    connection.query('SELECT * FROM UserRecords', async function(error, results, fields){
-        res.send(results);
-    });
-
 }
