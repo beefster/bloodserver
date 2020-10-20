@@ -34,7 +34,7 @@ var router = express.Router();
 
 router.post('/register',login.register);
 router.post('/login',login.login);
-router.get('/search', query.search);
+router.post('/search', query.search);
 router.get('/list', query.list);
 app.use('/api', router);
 app.listen(907, () => console.log('Server running.'));
