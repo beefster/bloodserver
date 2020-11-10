@@ -5,12 +5,10 @@ exports.register = async function(req, res){
     try{
         pool.getConnection(async function(err, connection){
             if(err) throw err;
-            console.log(`registration attempt\nemail:${req.body.email}\npass:${req.body.password}`)
             const passwordHash = await argon2.hash(req.body.Password);
             var user={
                 'email':req.body.Email,
                 'passwordHash':passwordHash,
-                'salt':''
             }
             connection.query('START TRANSACTION');
             connection.query('INSERT INTO Users SET ?', user, function (error, results, fields){
@@ -79,7 +77,7 @@ exports.register = async function(req, res){
 
 exports.login = async function(req, res){
     const email = req.body.email;
-    console.log(`login attempt\nuser:${email}\ngave password:${req.body.password}`);
+    //console.log(`login attempt\nuser:${email}\ngave password:${req.body.password}`);
     pool.query('SELECT * FROM Users WHERE email = ?', [email], async function (error, results, fields){
         if (error) {
             res.send({
