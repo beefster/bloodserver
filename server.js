@@ -32,10 +32,11 @@ app.use(function(req, res, next){
 });
 var router = express.Router();
 
-router.post('/register',login.register);
-router.post('/login',login.login);
+router.post('/register', login.register);
+router.post('/login', login.login);
 router.post('/search', query.search);
 router.post('/stats', query.stats);
+router.post('/createRequest', query.createRequest);
 router.get('/list', query.list);
 app.use('/api', router);
 app.listen(907, () => console.log('Server running.'));

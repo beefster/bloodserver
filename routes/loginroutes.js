@@ -1,5 +1,6 @@
 const argon2 = require('argon2');
 const pool = require('../db').pool;
+const jwt = require('jsonwebtoken');
 
 exports.register = async function(req, res){
     try{
@@ -78,7 +79,8 @@ exports.register = async function(req, res){
 exports.login = async function(req, res){
     const email = req.body.email;
     //console.log(`login attempt\nuser:${email}\ngave password:${req.body.password}`);
-    pool.query('SELECT * FROM Users WHERE email = ?', [email], async function (error, results, fields){
+    pool.query('SELECT Users.UserID AS ID, passwordHash, firstName, userType \
+    FROM Users JOIN UserRecords ON Users.UserID = UserRecords.UserID WHERE Users.email = ?', [email], async function (error, results, fields){
         if (error) {
             res.send({
                 "code":400,
@@ -86,13 +88,23 @@ exports.login = async function(req, res){
               });
         } else if(results.length == 1){
             if(await argon2.verify(results[0].passwordHash, req.body.password)){
-                console.log('login success\n================');
+
+                pool.query
+
+                var token = jwt.sign({
+
+                    ID: results[0].ID,
+                    userType:results[0].userType
+
+                }, process.env.TOKEN_SECRET, { expiresIn: '24h' });
+
                 res.send({
                     'code':200,
-                    'success':'login success'
+                    'success':'login success',
+                    'name':results[0].firstName,
+                    'token':token
                 });
             } else {
-                console.log('login failed\n================');
                 res.send({
                     'code':204,
                     'success':'incorrect password'

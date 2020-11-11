@@ -1,4 +1,7 @@
 const pool = require('../db').pool;
+
+const jwt = require('jsonwebtoken');
+
 exports.list = async function(req, res){
     pool.query('SELECT * FROM UserRecords', async function(error, results, fields){
         res.send({
@@ -70,6 +73,44 @@ exports.stats = async function(req, res){
         }
     })
 }
-// exports.createRequest = async function(req, res){
-//     query
-// }
+exports.createRequest = async function(req, res){
+    
+    const authHeader = req.headers['authorization']
+    const token = authHeader && authHeader.split(' ')[1]
+    if (token == null)  res.send({
+        'code':401,
+        'error':'no authorization token'
+    })
+
+    jwt.verify(token, process.env.TOKEN_SECRET, (err, data) => {
+        if(err){
+            console.log(error);
+            res.send({
+                'code':403,
+                'error':'error verifying token'
+            })
+        } else {
+            var record = {
+                SenderID:data.ID,
+                RecipientID:req.body.Recipient,
+                Accepted:0
+            }
+            pool.query('INSERT INTO Requests SET ?', record, (error) => {
+                if(error){
+                    res.send({
+                        'code':400,
+                        'queryerror':error
+                    })
+                } else {
+                    res.send({
+                        'code': 200,
+                        'success':'request made'
+                    })
+                }
+            })
+        }
+    });
+}
+exports.getRequests = async function(req,res){
+
+}
