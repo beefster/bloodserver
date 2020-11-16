@@ -1,7 +1,5 @@
 const pool = require('../db').pool;
 
-const jwt = require('jsonwebtoken');
-
 exports.list = async function(req, res){
     pool.query('SELECT * FROM UserRecords', async function(error, results, fields){
         res.send({
@@ -74,43 +72,46 @@ exports.stats = async function(req, res){
     })
 }
 exports.createRequest = async function(req, res){
-    
-    const authHeader = req.headers['authorization']
-    const token = authHeader && authHeader.split(' ')[1]
-    if (token == null)  res.send({
-        'code':401,
-        'error':'no authorization token'
-    })
-
-    jwt.verify(token, process.env.TOKEN_SECRET, (err, data) => {
-        if(err){
-            console.log(error);
+    var record = {
+        SenderID:req.id,
+        RecipientID:req.body.Recipient,
+        Accepted:0
+    }
+    pool.query('INSERT INTO Requests SET ?', record, (error) => {
+        if(error){
             res.send({
-                'code':403,
-                'error':'error verifying token'
+                'code':400,
+                'queryerror':error
             })
         } else {
-            var record = {
-                SenderID:data.ID,
-                RecipientID:req.body.Recipient,
-                Accepted:0
+            res.send({
+                'code': 200,
+                'success':'request made'
+            })
+        }
+    })
+}
+exports.getRequests = async function(req,res){
+    console.log('request GET')
+    pool.query(`SELECT * FROM UserRecords LEFT JOIN Requests ON UserID = RecipientID
+    WHERE SenderID = ${req.id}
+    UNION
+    SELECT * FROM UserRecords LEFT JOIN Requests ON UserID = SenderID
+    WHERE RecipientID = ${req.id}`, (error, results, fields) => {
+        if(error) res.status(400).send(error)
+        else{
+            sent = []
+            received = []
+            for (record in results){
+                row = results[record];
+                if(row['SenderID'] == req.id) sent.push(row)
+                else if(row['RecipientID'] == req.id) received.push(row)
             }
-            pool.query('INSERT INTO Requests SET ?', record, (error) => {
-                if(error){
-                    res.send({
-                        'code':400,
-                        'queryerror':error
-                    })
-                } else {
-                    res.send({
-                        'code': 200,
-                        'success':'request made'
-                    })
-                }
+            res.send({
+                'code': 200,
+                'sentRequests':sent,
+                'receivedRequests':received
             })
         }
     });
-}
-exports.getRequests = async function(req,res){
-
 }

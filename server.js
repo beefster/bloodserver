@@ -5,6 +5,7 @@ var login = require('./routes/loginroutes');;
 var query = require('./routes/queryroutes')
 const bodyParser = require('body-parser');
 const pool = require('./db').pool;
+const jwt = require('jsonwebtoken');
 
 pool.getConnection((err, testconn) => {
     if(err) console.error('database connection error');
@@ -21,6 +22,30 @@ pool.getConnection((err, testconn) => {
     }
 })
 
+const verifyToken = () => {
+    return (req, res, next) => {
+        const authHeader = req.headers['authorization']
+        const token = authHeader && authHeader.split(' ')[1]
+        if (token == null)  res.send({
+            'code':401,
+            'error':'no authorization token'
+        })
+
+        jwt.verify(token, process.env.TOKEN_SECRET, (err, data) => {
+            if(err){
+                console.log(err);
+                res.send({
+                    'code':403,
+                    'error':'error verifying token'
+                })
+            } else{
+                req.id = data.ID;
+                next();
+            }
+        })
+    }
+}
+
 const app = express();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
@@ -36,7 +61,8 @@ router.post('/register', login.register);
 router.post('/login', login.login);
 router.post('/search', query.search);
 router.post('/stats', query.stats);
-router.post('/createRequest', query.createRequest);
+router.post('/createRequest', verifyToken(), query.createRequest);
+router.get('/getRequests', verifyToken(), query.getRequests);
 router.get('/list', query.list);
 app.use('/api', router);
 app.listen(907, () => console.log('Server running.'));
