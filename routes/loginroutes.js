@@ -79,8 +79,9 @@ exports.register = async function(req, res){
 exports.login = async function(req, res){
     const email = req.body.email;
     //console.log(`login attempt\nuser:${email}\ngave password:${req.body.password}`);
-    pool.query('SELECT Users.UserID AS ID, passwordHash, firstName, userType \
-    FROM Users JOIN UserRecords ON Users.UserID = UserRecords.UserID WHERE Users.email = ?', [email], async function (error, results, fields){
+    pool.query('SELECT Users.UserID AS ID, passwordHash, UserRecords.* \
+    FROM Users JOIN UserRecords ON Users.UserID = UserRecords.UserID WHERE Users.email = ?', [email],
+    async function (error, results, fields){
         if (error) {
             res.send({
                 "code":400,
@@ -101,7 +102,18 @@ exports.login = async function(req, res){
                 res.send({
                     'code':200,
                     'success':'login success',
-                    'name':results[0].firstName,
+                    'profile':{
+                        'fname':results[0].firstName,
+                        'lname':results[0].lastName,
+                        'uname':results[0].userName,
+                        'blood':results[0].bloodType,
+                        'address':results[0].address,
+                        'city':results[0].city,
+                        'state':results[0].state,
+                        'country':results[0].country,
+                        'email':results[0].email,
+                        'id':results[0].ID
+                    },
                     'token':token
                 });
             } else {

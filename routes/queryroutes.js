@@ -1,17 +1,24 @@
 const pool = require('../db').pool;
 
-exports.list = async function(req, res){
-    pool.query('SELECT * FROM UserRecords', async function(error, results, fields){
-        res.send({
-            'code': 200,
-            'records': results
-        });
+exports.getProfile = async function(req, res){
+    pool.query('SELECT * FROM UserRecords WHERE UserID = '+req.id,
+    async function(error, results, fields){
+        if(error) res.status(400).send(error)
+        else{
+            res.send({
+                'code': 200,
+                'record': results[0]
+            });
+        }
     });
 }
 exports.search = async function(req, res){
     console.log('search request');
     console.log(req.body);
-    query = `SELECT * FROM UserRecords WHERE city = '${req.body.City}' AND state = '${req.body.State}' AND country = '${req.body.Country}'`;
+    query = `SELECT * FROM UserRecords
+    WHERE city = '${req.body.City}'
+    AND state = '${req.body.State}'
+    AND country = '${req.body.Country}'`;
     //console.log(query);
     if(req.body.Blood_type != '') query += ` AND bloodType = "${req.body.Blood_type}"`;
     pool.query(query, async function(error, results, fields){
@@ -32,8 +39,6 @@ exports.search = async function(req, res){
 
 }
 exports.stats = async function(req, res){
-    console.log('stats request:');
-    console.log(req.body);
     query = 'SELECT bloodType, COUNT(*) AS tally FROM UserRecords ';
     if(req.body.Country != '') query += `WHERE country = '${req.body.Country}'`;
     if(req.body.State != '') query += ` AND state = '${req.body.State}'`;
