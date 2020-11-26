@@ -1,13 +1,13 @@
 const pool = require('../db').pool;
 
-exports.getProfile = async function(req, res){
-    pool.query('SELECT * FROM UserRecords WHERE UserID = '+req.id,
+exports.updateProfile = async function(req, res){
+    
+    pool.query(`UPDATE UserRecords SET ? WHERE UserID = ${req.id}`, values,
     async function(error, results, fields){
         if(error) res.status(400).send(error)
         else{
             res.send({
-                'code': 200,
-                'record': results[0]
+                'code': 200
             });
         }
     });
@@ -106,10 +106,15 @@ exports.getRequests = async function(req,res){
         if(error) res.status(400).send(error)
         else{
             sent = []
+            approved = []
             received = []
+            available = []
             for (record in results){
                 row = results[record];
-                if(row['SenderID'] == req.id) sent.push(row)
+                if(row['SenderID'] == req.id){
+                    if(row['approved']) approved.push(row)
+                    else appr
+                }
                 else if(row['RecipientID'] == req.id) received.push(row)
             }
             res.send({

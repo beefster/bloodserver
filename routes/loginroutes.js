@@ -106,6 +106,7 @@ exports.login = async function(req, res){
                         'fname':results[0].firstName,
                         'lname':results[0].lastName,
                         'uname':results[0].userName,
+                        'usertype':results[0].userType,
                         'blood':results[0].bloodType,
                         'address':results[0].address,
                         'city':results[0].city,
