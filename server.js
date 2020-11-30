@@ -63,6 +63,6 @@ router.post('/search', query.search);
 router.post('/stats', query.stats);
 router.post('/createRequest', verifyToken(), query.createRequest);
 router.get('/getRequests', verifyToken(), query.getRequests);
-router.post('/updateProfile', verifyToken(), query.updateProfile);
+router.post('/updateProfile', verifyToken(), query.updatePassword, query.updateProfile);
 app.use('/api', router);
 app.listen(907, () => console.log('Server running.'));

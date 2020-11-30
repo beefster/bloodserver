@@ -1,27 +1,62 @@
 const pool = require('../db').pool;
 const argon2 = require('argon2');
 
-exports.updateProfile = async function(req, res){
+exports.updatePassword = async function(req, res, next){
     
-    pool.query(`SELECT passwordHash FROM Users WHERE UserID = ${req.id}`, async function(error, results, fields){
-        
-        if(await argon2.verify(results[0].passwordHash, req.body.password)){
-            pool.query(`UPDATE UserRecords SET ? WHERE UserID = ${req.id}`, values,
-            (error, results, fields) => {
-                if(error) res.status(400).send(error)
-                else{
-                    res.send({'code': 200});
+    if(!req.body.passChange) next()
+    else{
+        pool.query(`SELECT passwordHash FROM Users WHERE UserID = ${req.id}`, async function(error, results, fields){
+        if(await argon2.verify(results[0].passwordHash, req.body.passChange.old)){
+            const newPasswordHash = await argon2.hash(req.body.passChange.new);
+            pool.query(`UPDATE Users SET passwordHash = '${newPasswordHash}' WHERE UserID = ${req.id}`,
+            function(error, results, fields){
+                if(error){
+                    res.send({
+                        'code':400,
+                        'error':error
+                    })
+                } else {
+                    req.passChanged = true
+                    next()
                 }
-            })
-
+            });
         } else {
             res.send({
                 'code':204,
-                'success':'incorrect password'
+                'error':'current password was incorrect'
             });
         }
     })
+    }
 }
+
+exports.updateProfile = async function(req, res){
+    if(!(JSON.stringify(req.body.profileChange) === JSON.stringify({}))){
+        pool.query(`UPDATE UserRecords SET ? WHERE UserID = ${req.id}`, req.body.profileChange, (error, results, fields) => {
+        
+            var msg = ''
+            if(req.passChanged) msg = '\nPassword Changed!'
+            if(error){
+                res.send({
+                    'code':400,
+                    'error':'Profile update failed.'+msg
+                })
+                return
+            } else {
+                res.send({
+                    'code': 200,
+                    'success':'Profile updated!'+msg
+                });
+            }
+        })
+    } else if(req.passChanged) {
+        res.send({
+            'code': 200,
+            'success':'Password Changed!'
+        });
+    }
+}
+
 exports.search = async function(req, res){
     console.log('search request');
     console.log(req.body);
