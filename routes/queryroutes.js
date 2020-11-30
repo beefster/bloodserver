@@ -1,16 +1,26 @@
 const pool = require('../db').pool;
+const argon2 = require('argon2');
 
 exports.updateProfile = async function(req, res){
     
-    pool.query(`UPDATE UserRecords SET ? WHERE UserID = ${req.id}`, values,
-    async function(error, results, fields){
-        if(error) res.status(400).send(error)
-        else{
+    pool.query(`SELECT passwordHash FROM Users WHERE UserID = ${req.id}`, async function(error, results, fields){
+        
+        if(await argon2.verify(results[0].passwordHash, req.body.password)){
+            pool.query(`UPDATE UserRecords SET ? WHERE UserID = ${req.id}`, values,
+            (error, results, fields) => {
+                if(error) res.status(400).send(error)
+                else{
+                    res.send({'code': 200});
+                }
+            })
+
+        } else {
             res.send({
-                'code': 200
+                'code':204,
+                'success':'incorrect password'
             });
         }
-    });
+    })
 }
 exports.search = async function(req, res){
     console.log('search request');
