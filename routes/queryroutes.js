@@ -35,7 +35,7 @@ exports.updateProfile = async function(req, res){
         pool.query(`UPDATE UserRecords SET ? WHERE UserID = ${req.id}`, req.body.profileChange, (error, results, fields) => {
         
             var msg = ''
-            if(req.passChanged) msg = '\nPassword Changed!'
+            if(req.passChanged) msg = ' Password Changed!'
             if(error){
                 res.send({
                     'code':400,
@@ -141,32 +141,66 @@ exports.createRequest = async function(req, res){
         }
     })
 }
-exports.getRequests = async function(req,res){
-    console.log('request GET')
-    pool.query(`SELECT * FROM UserRecords LEFT JOIN Requests ON UserID = RecipientID
-    WHERE SenderID = ${req.id}
-    UNION
-    SELECT * FROM UserRecords LEFT JOIN Requests ON UserID = SenderID
-    WHERE RecipientID = ${req.id}`, (error, results, fields) => {
-        if(error) res.status(400).send(error)
+exports.getRequests = async function(req, res){
+    var which_id
+    var approval = 0
+    var fields = 'UserID, userName, bloodType, city, state, country'
+    if(req.body.status == 'approved' || req.body.status == 'available'){
+        approval = 1
+        fields = 'UserRecords.*'
+    }
+    if(req.body.status == 'sent' || req.body.status == 'available'){
+        which_id = 'SenderID'
+        other_id = 'RecipientID'
+    }
+    else{
+        which_id = 'RecipientID'
+        other_id = 'SenderID'
+    }
+    pool.query(`SELECT Requests.*, ${fields} FROM UserRecords LEFT JOIN Requests ON UserID = ${other_id}
+    WHERE ${which_id} = ${req.id} AND Accepted = ${approval}`, (error, results, fields) => {
+        if(error) res.send({
+            'code':400,
+            'error':'error getting requests'
+        })
         else{
-            sent = []
-            approved = []
-            received = []
-            available = []
+            requests = []
             for (record in results){
                 row = results[record];
-                if(row['SenderID'] == req.id){
-                    if(row['approved']) approved.push(row)
-                    else appr
+                result = {}
+                result.uname = row['userName']
+                result.blood = row['bloodType']
+                result.city = row['city']
+                result.state = row['state']
+                result.country = row['country']
+                result.id = row['RequestID']
+                if(approval){
+                    result.fname = row['firstName']
+                    result.lname = row['lastName']
+                    result.address = row['address']
+                    result.email = row['email']
                 }
-                else if(row['RecipientID'] == req.id) received.push(row)
+                requests.push(result)
             }
             res.send({
                 'code': 200,
-                'sentRequests':sent,
-                'receivedRequests':received
+                'requests':requests
             })
         }
     });
+}
+exports.approveRequest = async function(req, res){
+    pool.query(`UPDATE Requests SET Accepted = 1 WHERE RecipientID = ${req.id} AND RequestID = ${req.body.requestID}`, (error, results, fields) => {
+        if(error) {
+            console.log(error)
+            res.send({
+                'code':400,
+                'error':'query error approving request'
+            })
+        }
+        else res.send({
+            'code':200,
+            'success':'request approved'
+        })
+    })
 }
