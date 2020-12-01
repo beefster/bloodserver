@@ -157,7 +157,10 @@ exports.getRequests = async function(req, res){
         which_id = 'RecipientID'
         other_id = 'SenderID'
     }
-    pool.query(`SELECT Requests.*, ${fields} FROM UserRecords LEFT JOIN Requests ON UserID = ${other_id}
+    pool.query(`SELECT Requests.*,
+    DATEDIFF(CURRENT_TIMESTAMP, Timestamp) as daysAgo,
+    HOUR(TIMEDIFF(CURRENT_TIMESTAMP, Timestamp)) as hoursAgo,
+    ${fields} FROM UserRecords LEFT JOIN Requests ON UserID = ${other_id}
     WHERE ${which_id} = ${req.id} AND Accepted = ${approval}`, (error, results, fields) => {
         if(error) res.send({
             'code':400,
@@ -174,6 +177,11 @@ exports.getRequests = async function(req, res){
                 result.state = row['state']
                 result.country = row['country']
                 result.id = row['RequestID']
+                result.age = 'age'
+                if(row['hoursAgo'] <= 1) result.age = 'just now'
+                else if(row['hoursAgo'] < 49) result.age = row['hoursAgo'] + ' hrs ago'
+                else result.age = row['daysAgo']+' days ago'
+                
                 if(approval){
                     result.fname = row['firstName']
                     result.lname = row['lastName']
