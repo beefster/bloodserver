@@ -59,7 +59,7 @@ var router = express.Router();
 
 router.post('/register', login.register);
 router.post('/login', login.login);
-router.post('/search', query.search);
+router.post('/search', verifyToken(), query.search);
 router.post('/stats', query.stats);
 router.post('/createRequest', verifyToken(), query.createRequest);
 router.post('/getRequests', verifyToken(), query.getRequests);
